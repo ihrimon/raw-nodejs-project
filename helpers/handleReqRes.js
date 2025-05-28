@@ -4,7 +4,9 @@
 const url = require('url');
 const { StringDecoder } = require('string_decoder');
 const routes = require('../routes');
-const {notFoundHandler} = require('../handlers/routeHandlers/notFoundHandler')
+const {
+  notFoundHandler,
+} = require('../handlers/routeHandlers/notFoundHandler');
 
 // module scafolding
 const handler = {};
@@ -24,7 +26,7 @@ handler.handleReqRes = (req, res) => {
     method,
     queryStrObj,
     headerObj,
-  }
+  };
 
   const decoder = new StringDecoder('utf-8');
   let realData = '';
@@ -33,6 +35,12 @@ handler.handleReqRes = (req, res) => {
     ? routes[trimmedPath]
     : notFoundHandler;
 
+    req.on('data', (buffer) => {
+    realData += decoder.write(buffer);
+  });
+
+  req.on('end', () => {
+    realData += decoder.end();
     chosenHandler(reqProperties, (statusCode, payload) => {
       statusCode = typeof statusCode === 'number' ? statusCode : 500;
       payload = typeof payload === 'object' ? payload : {};
@@ -43,18 +51,7 @@ handler.handleReqRes = (req, res) => {
       res.writeHead(statusCode);
       res.end(payloadString);
     });
-
-  req.on('data', (buffer) => {
-    realData += decoder.write(buffer);
-  })
-
-req.on('end', () => {
-    realData += decoder.end();
-    console.log(realData);
-    // response handle
-    res.end('Uptime Monitoring Application');
-})
-
+  });
 };
 
 module.exports = handler;

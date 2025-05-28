@@ -1,22 +1,22 @@
 /* Uptime Monitoring Application */
 
 const http = require('http');
-
 const {handleReqRes} = require('./helpers/handleReqRes')
+const environment = require('./helpers/environments')
 
 // module scafolding
 const app = {};
 
 // configuaration
 app.config = {
-  port: 3000,
+  port: 5000,
 };
 
 // create server
 app.createServer = () => {
   const server = http.createServer(app.handleReqRes);
-  server.listen(app.config.port, () => {
-    console.log(`Listening to port at ${app.config.port}`);
+  server.listen(environment.port, () => {
+    console.log(`Listening to port at ${environment.port}`);
   });
 };
 
