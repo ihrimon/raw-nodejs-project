@@ -145,7 +145,7 @@ handler._users.put = (reqProperties, callback) => {
     if (firstName || lastName || password) {
       // lookup the user
       data.read('users', phone, (err, userData) => {
-        user = {...parseToJSON(userData)};
+        user = { ...parseToJSON(userData) };
 
         if (!err && user) {
           if (firstName) {
@@ -188,6 +188,40 @@ handler._users.put = (reqProperties, callback) => {
   }
 };
 
-handler._users.delete = (reqProperties, callback) => {};
+handler._users.delete = (reqProperties, callback) => {
+  // check the phone number if valid
+  const phone =
+    typeof reqProperties.queryStrObj.phone === 'string' &&
+    reqProperties.queryStrObj.phone.trim().length === 11
+      ? reqProperties.queryStrObj.phone
+      : false;
+
+  if (phone) {
+    // lookup the user
+    data.read('users', phone, (err, userData) => {
+      if (!err && userData) {
+        data.delete('users', phone, (err) => {
+          if (!err) {
+            callback(200, {
+              message: 'User deleted successfully!',
+            });
+          } else {
+            callback(500, {
+              message: 'There was a server error!',
+            });
+          }
+        });
+      } else {
+        callback(500, {
+          message: 'There was a server error!',
+        });
+      }
+    });
+  } else {
+    callback(400, {
+      message: 'There was a problem in your request!',
+    });
+  }
+};
 
 module.exports = handler;
