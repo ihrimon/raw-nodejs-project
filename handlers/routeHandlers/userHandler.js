@@ -1,7 +1,7 @@
 // dependencies
 const data = require('../../lib/data');
 const { hashedPassword } = require('../../helpers/utilities');
-const { parseJSON } = require('../../helpers/utilities');
+const { parseToJSON } = require('../../helpers/utilities');
 
 const handler = {};
 
@@ -52,8 +52,8 @@ handler._users.post = (reqProperties, callback) => {
 
   if (firstName && lastName && phone && password && tosAgreement) {
     // make sure that the user doesn't already exists
-    data.read('users', phone, (err1) => {
-      if (err1) {
+    data.read('users', phone, (err) => {
+      if (err) {
         const userObject = {
           firstName,
           lastName,
@@ -62,18 +62,18 @@ handler._users.post = (reqProperties, callback) => {
           tosAgreement,
         };
         // store the user to db
-        data.create('users', phone, userObject, (err2) => {
-          if (!err2) {
+        data.create('users', phone, userObject, (err) => {
+          if (!err) {
             callback(200, {
               message: 'User was created successfully!',
             });
           } else {
-            callback(500, { error: 'Could not create user!' });
+            callback(500, { message: 'Could not create user!' });
           }
         });
       } else {
         callback(500, {
-          error: 'There was a problem in server side!',
+          message: 'User already exists!',
         });
       }
     });
@@ -83,12 +83,110 @@ handler._users.post = (reqProperties, callback) => {
 };
 
 handler._users.get = (reqProperties, callback) => {
-  callback(200, {
-    message: 'Success get method',
-  });
+  // check the phone number if valid
+  const phone =
+    typeof reqProperties.queryStrObj.phone === 'string' &&
+    reqProperties.queryStrObj.phone.trim().length === 11
+      ? reqProperties.queryStrObj.phone
+      : false;
+
+  if (phone) {
+    // lookup the user
+    data.read('users', phone, (err, userData) => {
+      const user = { ...parseToJSON(userData) };
+      if (!err && userData) {
+        delete user.password;
+        callback(200, user);
+      } else {
+        callback(404, {
+          message: 'Requested user was not found!',
+        });
+      }
+    });
+  } else {
+    callback(404, {
+      message: 'Requested user was not found!',
+    });
+  }
 };
 
-handler._users.put = (reqProperties, callback) => {};
+handler._users.put = (reqProperties, callback) => {
+  const firstName =
+    typeof reqProperties.body.firstName === 'string' &&
+    reqProperties.body.firstName.trim().length > 0
+      ? reqProperties.body.firstName
+      : false;
+
+  const lastName =
+    typeof reqProperties.body.lastName === 'string' &&
+    reqProperties.body.lastName.trim().length > 0
+      ? reqProperties.body.lastName
+      : false;
+
+  const phone =
+    typeof reqProperties.body.phone === 'string' &&
+    reqProperties.body.phone.trim().length === 11
+      ? reqProperties.body.phone
+      : false;
+
+  const password =
+    typeof reqProperties.body.password === 'string' &&
+    reqProperties.body.password.trim().length > 6
+      ? reqProperties.body.password
+      : false;
+
+  const tosAgreement =
+    typeof reqProperties.body.tosAgreement === 'boolean' &&
+    reqProperties.body.tosAgreement
+      ? reqProperties.body.tosAgreement
+      : false;
+
+  if (phone) {
+    if (firstName || lastName || password) {
+      // lookup the user
+      data.read('users', phone, (err, userData) => {
+        user = {...parseToJSON(userData)};
+
+        if (!err && user) {
+          if (firstName) {
+            user.firstName = firstName;
+          }
+          if (lastName) {
+            user.lastName = lastName;
+          }
+          if (password) {
+            user.password = hashedPassword(password);
+          }
+
+          // store to the database
+          data.update('users', phone, user, (err) => {
+            if (!err) {
+              callback(200, {
+                message: 'User was updated successfully!',
+              });
+            } else {
+              callback(500, {
+                message: 'There was a problem in server!!',
+              });
+            }
+          });
+        } else {
+          callback(400, {
+            message: 'You have a problem in your request!',
+          });
+        }
+      });
+    } else {
+      callback(400, {
+        message: 'You have a problem in your request!',
+      });
+    }
+  } else {
+    callback(400, {
+      message: 'Invalid phone number. Please try again',
+    });
+  }
+};
 
 handler._users.delete = (reqProperties, callback) => {};
 
